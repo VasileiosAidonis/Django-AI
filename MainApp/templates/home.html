@@ -1,0 +1,159 @@
+{% extends 'base.html' %}
+
+{%block title %}Home{% endblock %}
+
+<script>
+{% block jquery %}
+
+var endpoint = '/api/chart/data/'
+var chartData = {{ request.session.pred_list }}[0]
+var lesionLabels = ['Actinic keratosis (AK)', 'Basal cell carcinoma (BCC)',
+                 'Benign keratosis (BKL)', 'Dermatofibroma (DF)', 'Melanoma (MEL)',
+                 'Melanocytic nevus (NV)', 'Squamous cell carcinoma (SCC)',
+                 'Unknown (UNK)', 'Vascular (VASC)']
+
+$.ajax({
+    method: "GET",
+    url: endpoint,
+    success: function(data){
+    setChart()
+    },
+    error: function(error_data){
+        console.log('error')
+        console.log(error_data)
+    }
+})
+
+function setChart(){
+        var ctx = document.getElementById('myChart').getContext('2d');
+        var myChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: lesionLabels,
+                datasets: [{
+                    label: 'Probability for each class',
+                    data: chartData,
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.2)',
+                        'rgba(54, 162, 235, 0.2)',
+                        'rgba(255, 206, 86, 0.2)',
+                        'rgba(75, 192, 192, 0.2)',
+                        'rgba(153, 102, 255, 0.2)',
+                        'rgba(255, 159, 64, 0.2)'
+                    ],
+                    borderColor: [
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(255, 206, 86, 1)',
+                        'rgba(75, 192, 192, 1)',
+                        'rgba(153, 102, 255, 1)',
+                        'rgba(255, 159, 64, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    yAxes: [{
+                        ticks: {
+                            beginAtZero: true,
+                            max: 1
+                        }
+                    }]
+                }
+            }
+        });
+
+}
+
+{% endblock %}
+</script>
+
+{% block body %}
+<div class="container">
+  <div class="row">
+
+    <div class="col-sm" style="height:160px; padding-top:10px;">
+        {% if messages %}
+          <div class="h5 alert alert-danger" role="alert"
+               style="font-size:52%; font-weight:450; padding=-10px; margin-top:-5px; margin-bottom:-8px; text-align:center; margin-left:4%; margin-right:4%;">
+            {% for message in messages %}
+              {{ message }}
+            {% endfor %}
+           </div>
+        {% endif %}
+        <form method="POST" action="" enctype="multipart/form-data">
+            {% csrf_token %}
+
+            <div class="h5 p-3">
+                <div style="padding-left:80px; padding-top:26px; font-family:monospace; font-size:62%; font-weight:550; margin-bottom:-40px;">
+                        (.jpg, .jpeg, .png)
+                </div>
+                <div class="shadow" style="border:1px solid #E5E5E5; padding:20px; font-size:87%; height:276px; background-color:#FFFFF">
+                    {{ form.as_p }}
+
+                    <input type="submit" value="Get Prediction" class="btn btn-info"
+                           style="margin-left:65%; margin-top:-12px;">
+                </div>
+            </div>
+        </form>
+    </div>
+    <div class="col-sm" style="margin-top:-5px;">
+        <label style="font-size:75%; margin-left:30%;"><i>Watch me first</i></label>
+        <video  id="my-video"
+               class="video-js vjs-big-play-centered"
+               controls
+               width="400"
+               height="260"
+               poster="http://vjs.zencdn.net/v/oceans.png"
+               data-setup="{}"
+       >
+          <source src="http://vjs.zencdn.net/v/oceans.mp4" type="video/mp4">
+
+          <p class="vjs-no-js">
+              To view this video please enable JavaScript, and consider upgrading
+              to a web browser that <a href="http://videojs.com/html5-video-support/" target="_blank">supports HTML5 video</a>
+          </p>
+       </video>
+    </div>
+  </div>
+</div>
+<br>
+<div class="container pt-3" style="height:300px;">
+  <div class="row">
+    <div class="col-sm">
+      <img src="/media/{{ request.session.image }}"
+           style="  border: 1px solid #eee; padding:2px; border-radius:4px;
+                    max-width:250px; max-height:250px;">
+    </div>
+    <div class="col-sm">
+        <ul class="pt-2" style="font-size:78%; margin-left:-20px;">
+            <li>{{ request.session.gender }}</li>
+            <li>{{ request.session.anatomic_site }}</li>
+            <li>{{ request.session.group_age }}</li>
+        </ul>
+    </div>
+    <div class="col-sm">
+        <div style="font-size:75%; margin-left:-50px; font-family:Segoe UI, Tahoma, sans-serif;">
+            The lesion was predicted as: {{ request.session.result_multiclass }}
+        </div>
+        {% if request.session.result_binary == 'malignant' %}
+            <div style="font-size:85%; font-weight:500; margin-left:-42px; color:red;">
+                {{ request.session.result_binary }} lesion
+            </div>
+        {% elif request.session.result_binary == 'benign' %}
+            <div style="font-size:85%; font-weight:500; margin-left:-42px; color:green;">
+                {{ request.session.result_binary }} lesion
+            </div>
+        {% elif request.session.result_binary == 'not malignant not benign' %}
+            <div style="font-size:85%; font-weight:500; margin-left:-42px; color:blue;">
+                {{ request.session.result_binary }} lesion
+            </div>
+        {% endif %}
+
+    </div>
+    <canvas id="myChart" width="300" height="180" style="margin-left:-60px;"></canvas>
+  </div>
+</div>
+
+{% endblock %}
